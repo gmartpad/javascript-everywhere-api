@@ -1,16 +1,23 @@
 // index.ts
 // This is the main entry point of our application
+const express = require('express');
+const { ApolloServer, gql } = require('apollo-server-express');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-import express from 'express';
-import { ApolloServer, gql } from 'apollo-server-express';
+const db = require('./db');
 
-const notes = [
-  { id: '1', content: 'This is a note', author: 'Adam Scott' },
-  { id: '2', content: 'This is another note', author: 'Harlow Everly' },
-  { id: '3', content: 'Oh hey look, another note!', author: 'Riley Harrison' }
-];
+const models = require('./models');
+const { model } = require('mongoose');
 
+// Run the server on a port specified in our .env file or port 4000
 const port = process.env.PORT || 4000;
+// Store the DB_HOST value as a variable
+const DB_HOST = process.env.DB_HOST
+
+const notes = async () => {
+  return models.Note.find();
+};
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = gql`
@@ -31,35 +38,35 @@ const typeDefs = gql`
   }
 `;
 
-interface INoteArgs {
-  id: string
-  content: string
-  author: string
-}
+// interface INoteArgs {
+//   id: string
+//   content: string
+//   author: string
+// }
 
 // Provide resolver functions for our schema fields
 const resolvers = {
   Query: {
     hello: () => 'Hello World!',
-    notes: () => notes,
-    note: (parent: any, args: INoteArgs) => {
-      return notes.find(note => note.id === args.id);
+    notes: async () => models.Note.find(),
+    note: async (parent, args) => {
+      return models.Note.findById(args.id);
     },
   },
   Mutation: {
-    newNote: (parent: any, args: INoteArgs) => {
-      const noteValue = {
-        id: String(notes.length + 1),
+    newNote: async (parent, args) => {
+      return models.Note.create({
         content: args.content,
         author: 'Adam Scott'
-      };
-      notes.push(noteValue)
-      return noteValue
+      })
     }
   }
 };
 
 const app = express();
+
+// Connect to the database
+db.connect(DB_HOST)
 
 // Apollo Server setup
 const server = new ApolloServer({ typeDefs, resolvers });
