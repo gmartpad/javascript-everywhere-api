@@ -1,4 +1,9 @@
 const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+// import the modules at the top of the file
+const depthLimit = require('graphql-depth-limit');
+const { createComplexityLimitRule } = require('graphql-validation-complexity');
 const { ApolloServer } = require('apollo-server-express');
 require('dotenv').config();
 
@@ -28,6 +33,9 @@ const DB_HOST = process.env.DB_HOST;
 
 const app = express();
 
+app.use(helmet());
+app.use(cors());
+
 // Connect to the database
 db.connect(DB_HOST);
 
@@ -35,7 +43,8 @@ db.connect(DB_HOST);
 const server = new ApolloServer({ 
   typeDefs, 
   resolvers,
-  context: ({ req }) => {
+  validationRules: [depthLimit(5), createComplexityLimitRule(1000)],
+  context: async ({ req }) => {
 
     // get the user token from the headers
     const token = req.headers.authorization;
